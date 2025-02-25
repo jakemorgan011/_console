@@ -25,6 +25,7 @@ _consoleAudioProcessor::_consoleAudioProcessor()
     _constructValueTreeState();
     dist = ValueTreeState->getRawParameterValue("dist");
     dry_wet = ValueTreeState->getRawParameterValue("dry_wet");
+    type = ValueTreeState->getRawParameterValue("type");
 }
 
 _consoleAudioProcessor::~_consoleAudioProcessor()
@@ -134,14 +135,73 @@ bool _consoleAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts)
 
 void _consoleAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    juce::AudioPlayHead* playHead = getPlayHead();
+    if(playHead != nullptr){
+        juce::AudioPlayHead::CurrentPositionInfo currentPosition;
+        time_in_samples = currentPosition.timeInSamples;
+    }
+    
     float* in_left = buffer.getWritePointer(0);
     float* in_right = buffer.getWritePointer(1);
     
     int num_samps = buffer.getNumSamples();
     
+    juce::AudioBuffer<float> dryBuff;
+    juce::AudioBuffer<float> wetBuff;
+    
+    dryBuff.setSize(2, 2048);
+    wetBuff.setSize(2, 2048);
+    
+    float* dry_left = dryBuff.getWritePointer(0);
+    float* dry_right = dryBuff.getWritePointer(1);
+    
+    float* wet_left = wetBuff.getWritePointer(0);
+    float* wet_right = wetBuff.getWritePointer(1);
+    
     for (int i = 0; i < num_samps; i++){
-        in_left[i] = tanh((in_left[i])*((temporary_dist/50.f)));
-        in_right[i] = tanh((in_left[i])*(temporary_dist/50.f));
+        switch(temporary_type){
+            case 0:
+                // hard clip
+                if(in_left[i]*temporary_dist/50.f > 1){
+                    in_left[i] = 1;
+                }
+                if(in_left[i]*temporary_dist/50.f < -1){
+                    in_left[i] = -1;
+                }
+                
+                if(in_right[i]*temporary_dist/50.f > 1){
+                    in_right[i] = 1;
+                }
+                if(in_right[i]*temporary_dist/50.f < -1){
+                    in_right[i] = -1;
+                }
+                
+            case 1:
+                // soft clip
+                wet_left[i] = tanh((in_left[i]*(temporary_dist/50.f)));
+                wet_right[i] = tanh((in_right[i]*(temporary_dist/50.f)));
+                break;
+                
+                // misc algorithms
+            case 2:
+                wet_left[i] = tanh(in_left[i]*tan(in_left[i]*(temporary_dist/50.f)));
+                wet_right[i] = tanh(in_right[i]*tan(in_right[i]*(temporary_dist/50.f)));
+                break;
+                
+                // this does nothing lol
+            case 3:
+                wet_left[i] = tanh(in_left[i]*(sin(in_left[i])/tan(in_left[i]*(temporary_dist/50.f))));
+                wet_right[i] = tanh(in_right[i]*(sin(in_right[i])/tan(in_right[i]*(temporary_dist/50.f))));
+                break;
+            
+        }
+        
+        dry_left[i] = in_left[i]*(1-(temporary_dry_wet/100.f));
+        dry_right[i] = in_right[i]*(1-(temporary_dry_wet/100.f));
+        
+        wet_left[i] = wet_left[i]*(temporary_dry_wet/100.f);
+        wet_right[i] = wet_right[i]*(temporary_dry_wet/100.f);
+        
     }
     
 }
@@ -183,7 +243,8 @@ void _consoleAudioProcessor::_constructValueTreeState(){
         
         std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("dist", 1), "dist", juce::NormalisableRange<float>(0.f,1.f,0.01f), 0.5f),
         
-        std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("dry_wet", 1), "dry_wet", juce::NormalisableRange<float>(0.f,1.f,0.01f), 0.5f)
+        std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("dry_wet", 1), "dry_wet", juce::NormalisableRange<float>(0.f,1.f,0.01f), 0.5f),
         
+        std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("type",1),"type", 0,5,1)
     }));
 }

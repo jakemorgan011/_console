@@ -130,6 +130,7 @@ public:
     
     var(const double& d){};
     
+    
     ~var();
     
     // make work.

@@ -59,14 +59,30 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
     
+
+    
     juce::AudioProcessorValueTreeState& getVTS(){
         return *ValueTreeState;
     }
     
+    // audio parameters test
+    juce::AudioProcessorParameterWithID* distParam;
+    juce::AudioProcessorParameterWithID* dryWetParam;
+    juce::AudioProcessorParameterWithID* typeParam;
+    
+    std::unique_ptr<juce::AudioProcessorValueTreeState> ValueTreeState;
+    
+    
     float temporary_dist;
     float temporary_dry_wet;
+    int temporary_type;
     std::string input_string;
+    std::string output_string;
+    bool showList = false;
     
+    long long int time_in_samples;
+    
+    std::atomic<float>* type = nullptr;
     
 private:
     
@@ -77,10 +93,8 @@ private:
     juce::LinearSmoothedValue<float> smoothedDist;
     juce::LinearSmoothedValue<float> smoothedDryWet;
     
-    std::unique_ptr<juce::AudioProcessorValueTreeState> ValueTreeState;
-    
-    commandData distCommand;
-    commandData dryWetCommand;
+    //commandData distCommand;
+    //commandData dryWetCommand;
     
     void _constructValueTreeState();
     //==============================================================================

@@ -13,7 +13,8 @@
 #include "termite_data_types.h"
 #include <regex>
 
-//TODO: allow parser to interact with the text in the listener and interpret the text.
+//TODO: allow parser to interact with the text in the listener and interpret the text
+/// done! sort of....
 
 // parsing =================
 struct parse_node {
@@ -118,28 +119,68 @@ public:
         std::regex dry_wet_pattern(R"(^set_drywet\s+(-?\d+)$)");
         std::regex type_pattern(R"(^set_type\s+(-?\d+)$)");
         std::regex hi("^hi$");
+        std::regex list("^show_list$");
+        std::regex lfo_frequency_pattern(R"(^set_lfo_freq\s+(\d+(?:\.\d+)?)$)");
+        std::regex lfo_type_pattern(R"(^set_lfo_type\s+(-?\d+)$)");
+        std::regex lfo_phase_pattern(R"(^set_lfo_phase\s+(-?\d+)$)");
         
         std::smatch match;
         
         if (std::regex_match(command, match, dist_amnt_pattern)){
             int dist_amnt = std::stoi(match[1].str());
-            std::cout << "distortion amount set to: " << dist_amnt << "/100" << std::endl;
             p.input_string = command;
             p.temporary_dist = dist_amnt;
+            
+            // assigning here because ValueTreeState is not constructed on launch.
+            p.distParam = p.ValueTreeState->getParameter("dist");
+            p.distParam->beginChangeGesture();
+            p.distParam->setValueNotifyingHost(dist_amnt/100.f);
+            p.distParam->endChangeGesture();
+            
+            p.output_string = "distus amountus setus " + std::to_string(dist_amnt) + "/100";
         }else if (std::regex_match(command, match, dry_wet_pattern)){
             int dry_wet_amnt = std::stoi(match[1].str());
-            std::cout << "dry/wet set to: " << dry_wet_amnt << "/100" << std::endl;
+
             p.temporary_dry_wet = dry_wet_amnt;
             p.input_string = command;
+            
+            // assigning here because ValueTreeState is not constructed on launch.
+            p.dryWetParam = p.ValueTreeState->getParameter("dry_wet");
+            p.dryWetParam->beginChangeGesture();
+            p.dryWetParam->setValueNotifyingHost(dry_wet_amnt/100.f);
+            p.dryWetParam->endChangeGesture();
+            
+            p.output_string = "dryus wetus setus" + std::to_string(dry_wet_amnt) + "/100";
         }else if (std::regex_match(command, match, type_pattern)){
             int type = std::stoi(match[1].str());
-            std::cout << "type set to: " << type << std::endl;
+            
+            //TODO: type is for some reason not working. figure it out.
+            p.temporary_type = type;
             p.input_string = command;
+            DBG(type);
+            
+            // assigning here because ValueTreeState is not constructed on launch.
+            p.typeParam = p.ValueTreeState->getParameter("type");
+            p.typeParam->beginChangeGesture();
+            p.typeParam->setValueNotifyingHost(type);
+            p.typeParam->endChangeGesture();
+            DBG(*p.type);
+            
+            p.output_string = "typus setus " + std::to_string(type);
         }else if (std::regex_match(command, match, hi)){
-            std::cout << "haiiii :p" << std::endl;
+            p.output_string = "haiiiiii :p";
+        }else if(std::regex_match(command, match, list)){
+            p.showList = true;
+            p.output_string = "commands... show yourself";
+        }else if(std::regex_match(command, match, lfo_frequency_pattern)){
+            
+        }else if(std::regex_match(command, match, lfo_type_pattern)){
+            
+        }else if(std::regex_match(command, match, lfo_phase_pattern)){
+            
         }
         else{
-            std::cout << "unknown command!" << std::endl;
+            p.output_string = "i dont know what you are talking about";
         }
     }
 };
@@ -154,11 +195,7 @@ class customListener : public juce::TextEditor::Listener {
 public:
     
     void setProcessor(_consoleAudioProcessor& p){
-        
         processor = &p;
-    }
-    
-    void notifyProcessor(_consoleAudioProcessor& p){
     }
     
     void textEditorReturnKeyPressed (juce::TextEditor& t) override {
@@ -166,7 +203,6 @@ public:
         editor_text.reset(new termite::string(t.getText().toUTF8()));
         std::cout << editor_text->returnCharacters() << std::endl;
         interpreter.parseCommand(editor_text->returnCharacters(), *processor);
-        notifyProcessor(*processor);
     }
     
     _consoleAudioProcessor* processor;
