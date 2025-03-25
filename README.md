@@ -1,3 +1,7 @@
+# this is plug-in has been changed to racecar
+<a name="https://github.com/jakemorgan011/racecar">racecar</a>
+this works on all platforms and no memory leaks
+
 # _console
 text-based command plugin!
 command list included on open.
