@@ -1,5 +1,5 @@
 # this is plug-in has been changed to racecar
-<a name="https://github.com/jakemorgan011/racecar">racecar</a>
+<a link="https://github.com/jakemorgan011/racecar">racecar</a>
 this works on all platforms and no memory leaks
 
 # _console
